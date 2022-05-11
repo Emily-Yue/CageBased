@@ -10,7 +10,7 @@ import {
   vertexShaderCage,
   fragmentShaderCage
 } from "./Shaders.js";
-import { Mat4, Vec4, Vec3 } from "../lib/TSM.js";
+import { Mat4, Vec4, Vec3, Vec2 } from "../lib/TSM.js";
 import { RenderPass } from "../lib/webglutils/RenderPass.js";
 import { Camera } from "../lib/webglutils/Camera.js";
 
@@ -60,8 +60,12 @@ export class CageAnimation extends CanvasAnimation{
     array[0] = 128;  // x-value
     array[1] = 128;  // y-value
 
-    const index = new Uint32Array(1);
-    index[0] = 1;
+    // const index = new Uint32Array(1);
+    // index[0] = 1;
+    const index = new Uint32Array(6);
+    index[0] = 2;
+    index[1] = 1;
+    index[2] = 3;
     this.sceneRenderPass.setIndexBufferData(index);
 
     this.sceneRenderPass.addUniform("screenSize",
@@ -78,7 +82,8 @@ export class CageAnimation extends CanvasAnimation{
       array
     );
 
-    this.sceneRenderPass.setDrawData(this.ctx.POINTS, 1, this.ctx.UNSIGNED_INT, 0);
+    //this.sceneRenderPass.setDrawData(this.ctx.POINTS, 1, this.ctx.UNSIGNED_INT, 0);
+    this.sceneRenderPass.setDrawData(this.ctx.TRIANGLES, 6, this.ctx.UNSIGNED_INT, 0);
     this.sceneRenderPass.setup();
   }
 
@@ -108,10 +113,15 @@ export class CageAnimation extends CanvasAnimation{
       undefined,
       array
     );
+    const gl: WebGLRenderingContext = this.ctx;
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    
 
-    this.cageRenderPass.setDrawData(this.ctx.LINES, 1, this.ctx.UNSIGNED_INT, 0);
+    this.cageRenderPass.setDrawData(this.ctx.LINE_LOOP, 1, this.ctx.UNSIGNED_INT, 0);
     this.cageRenderPass.setup();
   }
+
+  
 
   // public loadShader(gl, type, source) {
   //   const shader = gl.createShader(type);
@@ -263,6 +273,22 @@ export class CageAnimation extends CanvasAnimation{
 
   public reset(): void {}
 
+  /* 
+    cageCoords - coordinates of closed polygon cage
+    queryCoords - xy coordinates of the query point
+  */
+  public meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) {
+    const nSize = cageCoords.length;
+    if (nSize <= 1) return;
+    let dx, dy;
+    let s: Vec2[];
+    
+    for (let i = 0; i < nSize; i++) {
+      dx = cageCoords[i].x - pointCoord.x;
+      dy = cageCoords[i].y - pointCoord.y;
+      s.push(new Vec2([dx, dy]));
+    }
+  }
 }
 
 export function initializeCanvas(): void {
