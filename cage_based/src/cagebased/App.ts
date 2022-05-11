@@ -3,7 +3,7 @@ import { Mat4, Vec4, Vec3, Vec2 } from "../lib/TSM.js";
 
 var isSetUp = true;
 var isChangingHandle = false;
-var cageVertices  = []
+var cageVertices  = [];
 var ogCageVertices = [];
 var currentImageData = null;
 var ogImageData = null;
@@ -69,19 +69,19 @@ document.getElementById('textCanvas').onclick = function clickEvent(e) {
         cageVertices[highlightedHandle] = newPoint;
         
         // go through each pixel and update image
-        // var index = 0;
-        // for(var i = 0; i < imageWidth; i++){
-        //   for(var j = 0; j < imageHeight; j++){
-        //     var pixelInfo = copiedPixel(i, j);
-        //     if(pixelInfo == null) continue;
-        //     console.log("hit");
-        //     currentImageData[index] = pixelInfo[0];
-        //     currentImageData[index + 1] = pixelInfo[1];
-        //     currentImageData[index + 2] = pixelInfo[2];
-        //     currentImageData[index + 3] = pixelInfo[3];
-        //     index+=4;
-        //   }
-        // }
+        var index = 0;
+        for(var i = 0; i < imageWidth; i++){
+          for(var j = 0; j < imageHeight; j++){
+            var pixelInfo = copiedPixel(i, j);
+            if(pixelInfo == null) continue;
+            console.log("hit");
+            currentImageData[index] = pixelInfo[0];
+            currentImageData[index + 1] = pixelInfo[1];
+            currentImageData[index + 2] = pixelInfo[2];
+            currentImageData[index + 3] = pixelInfo[3];
+            index+=4;
+          }
+        }
         
         // handle is changed, so turn back into false
         isChangingHandle = false;
@@ -135,7 +135,10 @@ function copiedPixel(pixelNumX, pixelNumY) {
   P_coords[1] = coordY;
 
   // find its barycentric coordinates
-  var baryCoords = getBaryCoord(P_coords);
+  var baryCoords = meanValCoordinates(cageVertices, P_coords);
+  for (let i = 0; i < baryCoords.length; i++) {
+    console.log(baryCoords[i]);
+  }
 
   // look up point with same coordinates on
   // undeformed shape
@@ -610,11 +613,11 @@ function drawPoint(context, x, y, label, color, size) {
     cageCoords - coordinates of closed polygon cage
     queryCoords - xy coordinates of the query point
   */
-  function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) {
+  function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
     const nSize = cageCoords.length;
     if (nSize <= 1) return;
     let dx, dy: number;
-    let s: Vec2[];
+    let s: Vec2[] = [];
     
     for (let i = 0; i < nSize; i++) {
       dx = cageCoords[i].x - pointCoord.x;
@@ -622,14 +625,14 @@ function drawPoint(context, x, y, label, color, size) {
       s.push(new Vec2([dx, dy]));
     }
 
-    let baryCoords: number[];
+    let baryCoordinates: number[] = [];
     for (let i = 0; i < nSize; i++) {
-      baryCoords.push(0.0);
+      baryCoordinates.push(0.0);
     }
 
     let ip, im;
     let ri, rp, Ai, Di, dl, mu; // distance
-    let eps = 10.0 * Number.MIN_SAFE_INTEGER;
+    let eps = 0.0000001;
 
     for (let i = 0; i < nSize; i++) {
       ip = (i+1)%nSize;
@@ -638,8 +641,8 @@ function drawPoint(context, x, y, label, color, size) {
       Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
 
       if (ri <= eps) {
-        baryCoords[i] = 1.0;
-        return 0;
+        baryCoordinates[i] = 1.0;
+        return baryCoordinates;
       } else if (Math.abs(Ai) <= 0 && Di < 0.0) {
         dx = cageCoords[ip].x - cageCoords[i].x;
         dy = cageCoords[ip].y - cageCoords[i].y;
@@ -649,12 +652,12 @@ function drawPoint(context, x, y, label, color, size) {
         dy = pointCoord.y - cageCoords[i].y;
 
         mu = Math.sqrt(dx*dx + dy*dy)/dl;
-        baryCoords[i] = 1.0-mu;
-        baryCoords[ip] = mu;
-        return 0;
+        baryCoordinates[i] = 1.0-mu;
+        baryCoordinates[ip] = mu;
+        return baryCoordinates;
       }
 
-      let tanalpha: number[];
+      let tanalpha: number[] = new Array(nSize);
       for (let i = 0; i < nSize; i++) {
         ip = (i+1) % nSize;
         im = (nSize-1+i) % nSize;
@@ -671,15 +674,15 @@ function drawPoint(context, x, y, label, color, size) {
         ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
         wi = 2.0*(tanalpha[i] + tanalpha[im])/ri;
         wsum += wi;
-        baryCoords[i] = wi;
+        baryCoordinates[i] = wi;
       }
 
       if (Math.abs(wsum) > 0.0) {
         for (let i = 0; i < nSize; i++) {
-          baryCoords[i] /= wsum;
+          baryCoordinates[i] /= wsum;
         }
       }
-      return baryCoords;
+      return baryCoordinates;
     }
 
     
