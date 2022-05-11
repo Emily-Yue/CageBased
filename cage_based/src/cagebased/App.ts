@@ -4,15 +4,24 @@ import { Mat4, Vec4, Vec3, Vec2 } from "../lib/TSM.js";
 var isSetUp = true;
 var isChangingHandle = false;
 var cageVertices  = []
-var currentImageBitMap = null;
+var ogCageVertices = [];
+var currentImageData = null;
+var ogImageData = null;
 var highlightedHandle = -1;
 
-
+var imageWidth = 300;
+var imageHeight = 150;
+var imageStartX = 200;
+var imageStartY = 200;
 
 // our "main" function
 export function initializeCanvas() {
   initImage();
   makeCage();
+
+  // var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
+  // var context = canvas.getContext('2d');
+  // drawPoint(context, imageStartX, imageStartY, 'A', 'red', 10);
 }
 
 
@@ -32,10 +41,9 @@ document.getElementById('textCanvas').onclick = function clickEvent(e) {
     newPoint.y = y;
 
     cageVertices.push(newPoint);
+    ogCageVertices.push(newPoint);
 
-
-
-    // new cage, create image again
+    // new cage, create initialize image again
     context.clearRect(0, 0, canvas.width,canvas.height);
     initImage();
     makeCage();
@@ -45,22 +53,35 @@ document.getElementById('textCanvas').onclick = function clickEvent(e) {
     
     var pointSelected = isVertexHighlighted(x,y);
     
-    console.log(highlightedHandle);
+
     // if point is clicked on, then chane into changing handle mode
     if(pointSelected != -1) {
       isChangingHandle = true; 
       highlightedHandle = pointSelected; 
     } else {
       // if currently in chaning handle mode
-      console.log(isChangingHandle);
       if(isChangingHandle){
         // change handle
         var newPoint = new Vec2();
         newPoint.x = x;
         newPoint.y = y;
-        console.log(cageVertices);
+
         cageVertices[highlightedHandle] = newPoint;
-        console.log(cageVertices);
+        
+        // go through each pixel and update image
+        // var index = 0;
+        // for(var i = 0; i < imageWidth; i++){
+        //   for(var j = 0; j < imageHeight; j++){
+        //     var pixelInfo = copiedPixel(i, j);
+        //     if(pixelInfo == null) continue;
+        //     console.log("hit");
+        //     currentImageData[index] = pixelInfo[0];
+        //     currentImageData[index + 1] = pixelInfo[1];
+        //     currentImageData[index + 2] = pixelInfo[2];
+        //     currentImageData[index + 3] = pixelInfo[3];
+        //     index+=4;
+        //   }
+        // }
         
         // handle is changed, so turn back into false
         isChangingHandle = false;
@@ -73,10 +94,8 @@ document.getElementById('textCanvas').onclick = function clickEvent(e) {
       
     }
 
-    // new cage, create image again
-    context.clearRect(0, 0, canvas.width,canvas.height);
-    initImage();
-    makeCage();
+    // rerender canvas
+    rerenderImage();
 
 
   }
@@ -106,21 +125,120 @@ document.addEventListener('keydown', (event) => {
 
 
 // helper methods
+
+function copiedPixel(pixelNumX, pixelNumY) {
+  var coordX = pixelNumX + imageStartX;
+  var coordY = pixelNumY + imageStartY;
+
+  var P_coords = new Vec2();
+  P_coords[0] = coordX;
+  P_coords[1] = coordY;
+
+  // find its barycentric coordinates
+  var baryCoords = getBaryCoord(P_coords);
+
+  // look up point with same coordinates on
+  // undeformed shape
+  var U = Math.floor(baryCoords[0]);
+  var V = Math.floor(baryCoords[1]);
+  var W = 1 - U - V;
+  var newCoordsX = ogCageVertices[0].x*U + ogCageVertices[1].x*V + ogCageVertices[2].x*W;
+  var newCoordsY = ogCageVertices[0].y*U + ogCageVertices[1].y*V + ogCageVertices[2].y*W;
+  var newPixelX = newCoordsX - imageStartX;
+  var newPixelY = newCoordsY - imageStartY;
+
+
+
+  // copy pixel at that point
+  var rgba = new Vec4();
+  var index = 0;
+  for(var i = 0; i < imageWidth; i++){
+    for(var j = 0; j < imageHeight; j++){
+      if(i == newPixelX && j == newPixelY){
+        var rgba = new Vec4();
+        rgba[0] = ogImageData[index];
+        rgba[1] = ogImageData[index + 1];
+        rgba[2] = ogImageData[index + 2];
+        rgba[3] = ogImageData[index + 3];
+        return rgba;
+      }
+
+      index+=4;
+    }
+  }
+
+  return null;
+  
+
+
+
+}
+
+
+function getBaryCoord(P_coords : Vec2){
+  var a_coords : Vec2 = cageVertices[0];
+	var b_coords : Vec2 = cageVertices[1];
+  var c_coords : Vec2 = cageVertices[2];
+
+  var vab = Vec2.difference(b_coords, a_coords);
+  var vca = Vec2.difference(a_coords, c_coords);
+  var vac = Vec2.difference(c_coords, a_coords);
+  var vap = Vec2.difference(P_coords, a_coords);
+  var CAP_triangle = (Vec2.cross(vca, vap)).length() / 2.0;
+  var ABP_triangle = (Vec2.cross(vab, vap)).length() / 2.0;
+  var ABC_triangle = (Vec2.cross(vab, vac)).length() / 2.0;
+
+  var U = CAP_triangle / ABC_triangle;
+  var V = ABP_triangle / ABC_triangle;
+
+  return [U,V];
+
+}
+
+
+
 function testModify() {
   var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
   var context = canvas.getContext('2d');
   const image = document.getElementById('source') as HTMLImageElement;
 
-  var image_data = context.getImageData(200, 200, 600, 300);
+  var image_data = context.getImageData(imageStartX, imageStartY, imageWidth, imageHeight);
   
   for(var i = 0; i < image_data.data.length; i++){
     if((i + 1) % 4 == 0) continue;
     image_data.data[i] = 255 - image_data.data[i];
   }
+  currentImageData = image_data;
+  rerenderImage();
 
-  context.clearRect(0, 0, canvas.width,canvas.height);
-  loadImage(image_data);
-  makeCage();
+}
+
+// other modify
+function testModify2(x,y){
+  // var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
+  // var context = canvas.getContext('2d');
+
+  // var imagePixelX = x - imageStartX;
+  // var imagePixelY = y - imageStartY;
+
+  // var index = 0;
+  // for(var i = 0; i < imageWidth; i++){
+  //   for(var j = 0; j < imageHeight; j++){
+  //     if(i == imagePixelX && j == imagePixelY){
+  //       currentImageData[index] = 0;
+  //       currentImageData[index+1] = 0;
+  //       currentImageData[index+2] = 0;
+
+  //       for(var z = index - )
+  //     }
+
+  //     index+=4;
+  //   }
+  // }
+
+  // return [imagePixelX,  imagePixelY];
+
+  //rerenderImage();
 
 }
 
@@ -130,9 +248,22 @@ function initImage(){
   var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
   var context = canvas.getContext('2d');
   const image = document.getElementById('source') as HTMLImageElement;
-  context.drawImage(image, 200, 200, 600, 300);
+  context.drawImage(image, imageStartX, imageStartY, imageWidth, imageHeight);
+  currentImageData = context.getImageData(imageStartX, imageStartY, imageWidth, imageHeight);
+  ogImageData = context.getImageData(imageStartX, imageStartY, imageWidth, imageHeight);
 }
 
+
+// re-render image according to modified cage
+function rerenderImage() {
+  var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
+  var context = canvas.getContext('2d');
+  context.clearRect(0, 0, canvas.width,canvas.height);
+  makeCage();
+  loadImage(currentImageData);
+  //initImage();
+  
+}
 
 // load image based on image_data
 function loadImage(image_data){
@@ -141,7 +272,7 @@ function loadImage(image_data){
   Promise.all([
     createImageBitmap(image_data)
   ]).then(function(bitmaps) {
-    context.drawImage(bitmaps[0], 200, 200, 600, 300);
+    context.drawImage(bitmaps[0], imageStartX, imageStartY, imageWidth, imageHeight);
   });
 }
 
@@ -178,9 +309,6 @@ function isVertexHighlighted(x, y) {
       
       var xValue = cageVertices[i].x;
       var yValue = cageVertices[i].y;
-      console.log("compare");
-      console.log(xValue, yValue);
-      console.log(x,y);
       if(xValue - 10 <= x && x <= xValue + 10){
         if(yValue - 10<= y && y <= yValue + 10){
           return i;
@@ -222,6 +350,8 @@ function drawPoint(context, x, y, label, color, size) {
       context.fillText(label, textX, textY);
   }
 }
+
+
 
 
 // export class CageAnimation extends CanvasAnimation{
