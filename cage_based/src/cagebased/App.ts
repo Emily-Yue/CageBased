@@ -483,7 +483,7 @@ function drawPoint(context, x, y, label, color, size) {
   function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) {
     const nSize = cageCoords.length;
     if (nSize <= 1) return;
-    let dx, dy;
+    let dx, dy: number;
     let s: Vec2[];
     
     for (let i = 0; i < nSize; i++) {
@@ -491,6 +491,69 @@ function drawPoint(context, x, y, label, color, size) {
       dy = cageCoords[i].y - pointCoord.y;
       s.push(new Vec2([dx, dy]));
     }
+
+    let baryCoords: number[];
+    for (let i = 0; i < nSize; i++) {
+      baryCoords.push(0.0);
+    }
+
+    let ip, im;
+    let ri, rp, Ai, Di, dl, mu; // distance
+    let eps = 10.0 * Number.MIN_SAFE_INTEGER;
+
+    for (let i = 0; i < nSize; i++) {
+      ip = (i+1)%nSize;
+      ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
+      Ai = -0.5*(s[i].x*s[ip][1] - s[ip].x*s[i].y);
+      Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
+
+      if (ri <= eps) {
+        baryCoords[i] = 1.0;
+        return 0;
+      } else if (Math.abs(Ai) <= 0 && Di < 0.0) {
+        dx = cageCoords[ip].x - cageCoords[i].x;
+        dy = cageCoords[ip].y - cageCoords[i].y;
+        dl = Math.sqrt(dx*dx + dy*dy);
+        
+        dx = pointCoord.x - cageCoords[i].x;
+        dy = pointCoord.y - cageCoords[i].y;
+
+        mu = Math.sqrt(dx*dx + dy*dy)/dl;
+        baryCoords[i] = 1.0-mu;
+        baryCoords[ip] = mu;
+        return 0;
+      }
+
+      let tanalpha: number[];
+      for (let i = 0; i < nSize; i++) {
+        ip = (i+1) % nSize;
+        im = (nSize-1+i) % nSize;
+        ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
+        rp = Math.sqrt(s[ip].x*s[ip].x + s[ip].y*s[ip].y);
+        Ai = 0.5*(s[i].x*s[ip].y - s[ip].x*s[i].y);
+        Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
+        tanalpha[i] = (ri*rp - Di)/(2.0*Ai);
+      }
+
+      let wi, wsum: number;
+      for (let i = 0; i < nSize; i++) {
+        im = (nSize-1+1) % nSize;
+        ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
+        wi = 2.0*(tanalpha[i] + tanalpha[im])/ri;
+        wsum += wi;
+        baryCoords[i] = wi;
+      }
+
+      if (Math.abs(wsum) > 0.0) {
+        for (let i = 0; i < nSize; i++) {
+          baryCoords[i] /= wsum;
+        }
+      }
+      return baryCoords;
+    }
+
+    
+
   }
 
 
