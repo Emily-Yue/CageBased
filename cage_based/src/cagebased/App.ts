@@ -136,9 +136,9 @@ function copiedPixel(pixelNumX, pixelNumY) {
 
   // find its barycentric coordinates
   var baryCoords = meanValCoordinates(cageVertices, P_coords);
-  for (let i = 0; i < baryCoords.length; i++) {
-    console.log(baryCoords[i]);
-  }
+  // for (let i = 0; i < baryCoords.length; i++) {
+  //   console.log(baryCoords[i]);
+  // }
 
   // look up point with same coordinates on
   // undeformed shape
@@ -636,8 +636,8 @@ function drawPoint(context, x, y, label, color, size) {
 
     for (let i = 0; i < nSize; i++) {
       ip = (i+1)%nSize;
-      ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
-      Ai = -0.5*(s[i].x*s[ip][1] - s[ip].x*s[i].y);
+      ri = Math.sqrt(s[i].x * s[i].x + s[i].y * s[i].y);
+      Ai = 0.5*(s[i].x * s[ip].y - s[ip].x * s[i].y);
       Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
 
       if (ri <= eps) {
@@ -682,6 +682,7 @@ function drawPoint(context, x, y, label, color, size) {
           baryCoordinates[i] /= wsum;
         }
       }
+      console.log(baryCoordinates)
       return baryCoordinates;
     }
 
