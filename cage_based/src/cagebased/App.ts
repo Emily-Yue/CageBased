@@ -9,8 +9,8 @@ var currentImageData = null;
 var ogImageData = null;
 var highlightedHandle = -1;
 
-var imageWidth = 300;
-var imageHeight = 150;
+var imageWidth = 200;
+var imageHeight = 100;
 var imageStartX = 200;
 var imageStartY = 200;
 
@@ -69,20 +69,22 @@ document.getElementById('textCanvas').onclick = function clickEvent(e) {
         cageVertices[highlightedHandle] = newPoint;
         
         // go through each pixel and update image
+        var hit_count = 0;
         var index = 0;
         for(var i = 0; i < imageWidth; i++){
           for(var j = 0; j < imageHeight; j++){
             console.log(i, j);
             var pixelInfo = copiedPixel(i, j);
             if(pixelInfo == null) continue;
-            currentImageData[index] = pixelInfo[0];
-            currentImageData[index + 1] = pixelInfo[1];
-            currentImageData[index + 2] = pixelInfo[2];
-            currentImageData[index + 3] = pixelInfo[3];
+            hit_count++;
+            currentImageData.data[index] = pixelInfo[0];
+            currentImageData.data[index + 1] = pixelInfo[1];
+            currentImageData.data[index + 2] = pixelInfo[2];
+            currentImageData.data[index + 3] = pixelInfo[3];
             index+=4;
           }
         }
-        
+    
         // handle is changed, so turn back into false
         isChangingHandle = false;
         highlightedHandle = -1;
@@ -131,24 +133,33 @@ function copiedPixel(pixelNumX, pixelNumY) {
   var coordY = pixelNumY + imageStartY;
 
   var P_coords = new Vec2();
-  P_coords[0] = coordX;
-  P_coords[1] = coordY;
-
+  P_coords.x = coordX;
+  P_coords.y = coordY;
+  
+  console.log(P_coords.x, P_coords.y);
   // find its barycentric coordinates
-  var baryCoords = meanValCoordinates(cageVertices, P_coords);
-  // for (let i = 0; i < baryCoords.length; i++) {
-  //   console.log(baryCoords[i]);
-  // }
+  var baryCoords = getBaryCoord(P_coords);
+  //var baryCoords = meanValCoordinates(cageVertices, P_coords);
+  for (let i = 0; i < baryCoords.length; i++) {
+    console.log(baryCoords[i]);
+  }
 
   // look up point with same coordinates on
   // undeformed shape
-  var U = Math.floor(baryCoords[0]);
-  var V = Math.floor(baryCoords[1]);
-  var W = 1 - U - V;
-  var newCoordsX = ogCageVertices[0].x*U + ogCageVertices[1].x*V + ogCageVertices[2].x*W;
-  var newCoordsY = ogCageVertices[0].y*U + ogCageVertices[1].y*V + ogCageVertices[2].y*W;
-  var newPixelX = newCoordsX - imageStartX;
-  var newPixelY = newCoordsY - imageStartY;
+  // var U = baryCoords[0];
+  // var V = baryCoords[1];
+  // var W = 1 - U - V;
+  // var newCoordsX = ogCageVertices[0].x*U + ogCageVertices[1].x*V + ogCageVertices[2].x*W;
+  // var newCoordsY = ogCageVertices[0].y*U + ogCageVertices[1].y*V + ogCageVertices[2].y*W;
+
+  var newCoordsX = 0;
+  var newCoordsY = 0;
+  for(var i = 0; i < baryCoords.length; i++){
+    newCoordsX+=(ogCageVertices[i].x*baryCoords[i]);
+    newCoordsY+=(ogCageVertices[i].x*baryCoords[i]);
+  }
+  var newPixelX = Math.floor(newCoordsX - imageStartX);
+  var newPixelY = Math.floor(newCoordsY - imageStartY);
   console.log(newPixelX, newPixelY);
 
 
@@ -160,10 +171,10 @@ function copiedPixel(pixelNumX, pixelNumY) {
     for(var j = 0; j < imageHeight; j++){
       if(i == newPixelX && j == newPixelY){
         var rgba = new Vec4();
-        rgba[0] = ogImageData[index];
-        rgba[1] = ogImageData[index + 1];
-        rgba[2] = ogImageData[index + 2];
-        rgba[3] = ogImageData[index + 3];
+        rgba[0] = ogImageData.data[index];
+        rgba[1] = ogImageData.data[index + 1];
+        rgba[2] = ogImageData.data[index + 2];
+        rgba[3] = ogImageData.data[index + 3];
         return rgba;
       }
 
@@ -195,7 +206,10 @@ function getBaryCoord(P_coords : Vec2){
   var U = CAP_triangle / ABC_triangle;
   var V = ABP_triangle / ABC_triangle;
 
-  return [U,V];
+  //return [U, V, 1 - U - V];
+  //return [V, U, 1 - U - V];
+  return [ 1 - U - V, V, U];
+  // return [ 1 - U - V, U, V];
 
 }
 
@@ -333,7 +347,7 @@ function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
   const nSize = cageCoords.length;
   if (nSize <= 1) return;
   let dx, dy: number;
-  let s: Vec2[] = [];
+  let s : Vec2[] = [];
   
   for (let i = 0; i < nSize; i++) {
     dx = cageCoords[i].x - pointCoord.x;
@@ -353,13 +367,14 @@ function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
   for (let i = 0; i < nSize; i++) {
     ip = (i+1)%nSize;
     ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
-    Ai = -0.5*(s[i].x*s[ip][1] - s[ip].x*s[i].y);
+    Ai = 0.5*(s[i].x*s[ip].y - s[ip].x*s[i].y);
     Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
 
     if (ri <= eps) {
       baryCoordinates[i] = 1.0;
       return baryCoordinates;
-    } else if (Math.abs(Ai) <= 0 && Di < 0.0) {
+    } 
+    else if (Math.abs(Ai) <= 0 && Di < 0.0) {
       dx = cageCoords[ip].x - cageCoords[i].x;
       dy = cageCoords[ip].y - cageCoords[i].y;
       dl = Math.sqrt(dx*dx + dy*dy);
@@ -372,68 +387,86 @@ function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
       baryCoordinates[ip] = mu;
       return baryCoordinates;
     }
+  }
 
-    let tanalpha: number[] = new Array(nSize);
-    for (let i = 0; i < nSize; i++) {
-      ip = (i+1) % nSize;
-      im = (nSize-1+i) % nSize;
-      ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
-      rp = Math.sqrt(s[ip].x*s[ip].x + s[ip].y*s[ip].y);
-      Ai = 0.5*(s[i].x*s[ip].y - s[ip].x*s[i].y);
-      Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
-      tanalpha[i] = (ri*rp - Di)/(2.0*Ai);
-    }
+  let tanalpha: number[] = new Array(nSize);
+  for (let i = 0; i < nSize; i++) {
+    ip = (i+1) % nSize;
+    im = (nSize-1+i) % nSize;
+    ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
+    rp = Math.sqrt(s[ip].x*s[ip].x + s[ip].y*s[ip].y);
+    Ai = 0.5*(s[i].x*s[ip].y - s[ip].x*s[i].y);
+    Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
+    tanalpha[i] = (ri*rp - Di)/(2.0*Ai);
+  }
 
-    let wi, wsum: number;
-    for (let i = 0; i < nSize; i++) {
-      ip = (i+1)%nSize;
-      ri = Math.sqrt(s[i].x * s[i].x + s[i].y * s[i].y);
-      Ai = 0.5*(s[i].x * s[ip].y - s[ip].x * s[i].y);
-      Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
+  let wi = 0.0;
+  let wsum = 0.0;
+  for( var i = 0; i < nSize; i++) {
+    im = (nSize-1+i)%nSize;
+    ri = Math.sqrt( s[i].x*s[i].x + s[i].y*s[i].y);
+    wi = 2.0*( tanalpha[i] + tanalpha[im] )/ri;
+    wsum += wi;
+    baryCoordinates[i] = wi;
+  }
 
-      if (ri <= eps) {
-        baryCoordinates[i] = 1.0;
-        return baryCoordinates;
-      } else if (Math.abs(Ai) <= 0 && Di < 0.0) {
-        dx = cageCoords[ip].x - cageCoords[i].x;
-        dy = cageCoords[ip].y - cageCoords[i].y;
-        dl = Math.sqrt(dx*dx + dy*dy);
-        
-        dx = pointCoord.x - cageCoords[i].x;
-        dy = pointCoord.y - cageCoords[i].y;
-
-        mu = Math.sqrt(dx*dx + dy*dy)/dl;
-        baryCoordinates[i] = 1.0-mu;
-        baryCoordinates[ip] = mu;
-        return baryCoordinates;
-      }
-
-      let tanalpha: number[] = new Array(nSize);
-      for (let i = 0; i < nSize; i++) {
-        ip = (i+1) % nSize;
-        im = (nSize-1+i) % nSize;
-        ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
-        rp = Math.sqrt(s[ip].x*s[ip].x + s[ip].y*s[ip].y);
-        Ai = 0.5*(s[i].x*s[ip].y - s[ip].x*s[i].y);
-        Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
-        tanalpha[i] = (ri*rp - Di)/(2.0*Ai);
-      }
-
-    if (Math.abs(wsum) > 0.0) {
-      for (let i = 0; i < nSize; i++) {
-        baryCoordinates[i] /= wsum;
-      }
-
-      if (Math.abs(wsum) > 0.0) {
-        for (let i = 0; i < nSize; i++) {
-          baryCoordinates[i] /= wsum;
-        }
-      }
-      console.log(baryCoordinates)
-      return baryCoordinates;
-    }
-      return baryCoordinates;
+  if( Math.abs(wsum ) > 0.0){
+    for( var i = 0; i < nSize; i++){
+      baryCoordinates[i] /= wsum;
     }
   }
 
+  return baryCoordinates;
+
+  // for (let i = 0; i < nSize; i++) {
+  //   ip = (i+1)%nSize;
+  //   ri = Math.sqrt(s[i].x * s[i].x + s[i].y * s[i].y);
+  //   Ai = 0.5*(s[i].x * s[ip].y - s[ip].x * s[i].y);
+  //   Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
+
+  //   if (ri <= eps) {
+  //     baryCoordinates[i] = 1.0;
+  //     return baryCoordinates;
+  //   } else if (Math.abs(Ai) <= 0 && Di < 0.0) {
+  //     dx = cageCoords[ip].x - cageCoords[i].x;
+  //     dy = cageCoords[ip].y - cageCoords[i].y;
+  //     dl = Math.sqrt(dx*dx + dy*dy);
+      
+  //     dx = pointCoord.x - cageCoords[i].x;
+  //     dy = pointCoord.y - cageCoords[i].y;
+
+  //     mu = Math.sqrt(dx*dx + dy*dy)/dl;
+  //     baryCoordinates[i] = 1.0-mu;
+  //     baryCoordinates[ip] = mu;
+  //     return baryCoordinates;
+  //   }
+
+  //   let tanalpha: number[] = new Array(nSize);
+  //   for (let i = 0; i < nSize; i++) {
+  //     ip = (i+1) % nSize;
+  //     im = (nSize-1+i) % nSize;
+  //     ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
+  //     rp = Math.sqrt(s[ip].x*s[ip].x + s[ip].y*s[ip].y);
+  //     Ai = 0.5*(s[i].x*s[ip].y - s[ip].x*s[i].y);
+  //     Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
+  //     tanalpha[i] = (ri*rp - Di)/(2.0*Ai);
+  //   }
+
+  // if (Math.abs(wsum) > 0.0) {
+  //   for (let i = 0; i < nSize; i++) {
+  //     baryCoordinates[i] /= wsum;
+  //   }
+
+  //   if (Math.abs(wsum) > 0.0) {
+  //     for (let i = 0; i < nSize; i++) {
+  //       baryCoordinates[i] /= wsum;
+  //     }
+  //   }
+  //   console.log(baryCoordinates)
+  //   return baryCoordinates;
+  // }
+  //   return baryCoordinates;
+  // }
 }
+
+
