@@ -661,9 +661,9 @@ function drawPoint(context, x, y, label, color, size) {
       for (let i = 0; i < nSize; i++) {
         ip = (i+1) % nSize;
         im = (nSize-1+i) % nSize;
-        ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
-        rp = Math.sqrt(s[ip].x*s[ip].x + s[ip].y*s[ip].y);
-        Ai = 0.5*(s[i].x*s[ip].y - s[ip].x*s[i].y);
+        ri = Math.sqrt(s[i].x * s[i].x + s[i].y * s[i].y);
+        rp = Math.sqrt(s[ip].x * s[ip].x + s[ip].y * s[ip].y);
+        Ai = 0.5*(s[i].x * s[ip].y - s[ip].x * s[i].y);
         Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
         tanalpha[i] = (ri*rp - Di)/(2.0*Ai);
       }
