@@ -136,9 +136,9 @@ function copiedPixel(pixelNumX, pixelNumY) {
 
   // find its barycentric coordinates
   var baryCoords = meanValCoordinates(cageVertices, P_coords);
-  for (let i = 0; i < baryCoords.length; i++) {
-    console.log(baryCoords[i]);
-  }
+  // for (let i = 0; i < baryCoords.length; i++) {
+  //   console.log(baryCoords[i]);
+  // }
 
   // look up point with same coordinates on
   // undeformed shape
@@ -386,18 +386,54 @@ function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
 
     let wi, wsum: number;
     for (let i = 0; i < nSize; i++) {
-      im = (nSize-1+1) % nSize;
-      ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
-      wi = 2.0*(tanalpha[i] + tanalpha[im])/ri;
-      wsum += wi;
-      baryCoordinates[i] = wi;
-    }
+      ip = (i+1)%nSize;
+      ri = Math.sqrt(s[i].x * s[i].x + s[i].y * s[i].y);
+      Ai = 0.5*(s[i].x * s[ip].y - s[ip].x * s[i].y);
+      Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
+
+      if (ri <= eps) {
+        baryCoordinates[i] = 1.0;
+        return baryCoordinates;
+      } else if (Math.abs(Ai) <= 0 && Di < 0.0) {
+        dx = cageCoords[ip].x - cageCoords[i].x;
+        dy = cageCoords[ip].y - cageCoords[i].y;
+        dl = Math.sqrt(dx*dx + dy*dy);
+        
+        dx = pointCoord.x - cageCoords[i].x;
+        dy = pointCoord.y - cageCoords[i].y;
+
+        mu = Math.sqrt(dx*dx + dy*dy)/dl;
+        baryCoordinates[i] = 1.0-mu;
+        baryCoordinates[ip] = mu;
+        return baryCoordinates;
+      }
+
+      let tanalpha: number[] = new Array(nSize);
+      for (let i = 0; i < nSize; i++) {
+        ip = (i+1) % nSize;
+        im = (nSize-1+i) % nSize;
+        ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
+        rp = Math.sqrt(s[ip].x*s[ip].x + s[ip].y*s[ip].y);
+        Ai = 0.5*(s[i].x*s[ip].y - s[ip].x*s[i].y);
+        Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
+        tanalpha[i] = (ri*rp - Di)/(2.0*Ai);
+      }
 
     if (Math.abs(wsum) > 0.0) {
       for (let i = 0; i < nSize; i++) {
         baryCoordinates[i] /= wsum;
       }
+
+      if (Math.abs(wsum) > 0.0) {
+        for (let i = 0; i < nSize; i++) {
+          baryCoordinates[i] /= wsum;
+        }
+      }
+      console.log(baryCoordinates)
+      return baryCoordinates;
     }
-    return baryCoordinates;
+      return baryCoordinates;
+    }
   }
+
 }
