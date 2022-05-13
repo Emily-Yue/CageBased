@@ -151,7 +151,7 @@ function sleep(ms) {
 async function animate() {
   var dT = 0.1
   for (var i = 0; i <= all_cages.length -1; i+=dT) {        
-    await sleep(10);
+    await sleep(1);
     drawOneFrame(i);
   }
 }
@@ -298,8 +298,24 @@ function drawDeformedImage(){
   var index = 0;
   context.clearRect(0, 0, canvas.width,canvas.height);
   makeCage();
+
+  // figure out bounding box of pixels to rerender on the canvas
+  // let minX: number = 0;
+  // let minY: number = 0;
+  // let maxX: number = canvas.width;
+  // let maxY: number = canvas.height;
+  // for (let v = 0; v < cageVertices.length; v++) {
+  //   let currV = cageVertices[v];
+  //   minX = Math.min(minX, currV.x);
+  //   minY = Math.min(minY, currV.y);
+  //   maxX = Math.max(maxX, currV.x);
+  //   maxY = Math.max(maxY, currV.y);
+  // }
+
   for(var i = 0; i < canvas.width; i++){
     for(var j = 0; j < canvas.height; j++){
+  //for (let i = minX; i < maxX; i++) {
+  //  for (let j = minY; j < maxY; j++) {
       //console.log(i, j);
       var pixelInfo = copiedPixel(i, j);
       if(pixelInfo == null) {
