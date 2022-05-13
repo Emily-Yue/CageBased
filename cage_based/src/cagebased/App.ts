@@ -1,29 +1,36 @@
-import { Mat4, Vec4, Vec3, Vec2 } from "../lib/TSM.js";
+import { Mat4, Vec4, Vec3, Vec2, epsilon } from "../lib/TSM.js";
 
 
+// state variables
 var isSetUp = true;
 var isChangingHandle = false;
+
+// cage info
 var cageVertices  = [];
 var ogCageVertices = [];
-var currentImageData = null;
-var ogImageData = null;
+
+// image data
 var currentImageData2D = [];
 var ogImageData2D = [];
+
+// UI
 var highlightedHandle = -1;
 
+// image info
 var imageWidth = 200;
 var imageHeight = 100;
 var imageStartX = 400;
 var imageStartY = 400;
 
+
+
+// keyframe stuff
+var all_cages = []
+
 // our "main" function
 export function initializeCanvas() {
   initImage();
   makeCage();
-
-  // var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
-  // var context = canvas.getContext('2d');
-  // drawPoint(context, imageStartX, imageStartY, 'A', 'red', 10);
 }
 
 
@@ -52,16 +59,13 @@ document.getElementById('textCanvas').onclick = function clickEvent(e) {
   } 
   // if not in set up mode, find if a point is selected
   else {
-    
     var pointSelected = isVertexHighlighted(x,y);
     
-
     // if point is clicked on, then chane into changing handle mode
     if(pointSelected != -1) {
       isChangingHandle = true; 
       highlightedHandle = pointSelected; 
-      // rerender canvas
-      //rerenderImage();
+      // rerender cage
       makeCage();
     } else {
       // if currently in chaning handle mode
@@ -70,70 +74,15 @@ document.getElementById('textCanvas').onclick = function clickEvent(e) {
         var newPoint = new Vec2();
         newPoint.x = x;
         newPoint.y = y;
-
         cageVertices[highlightedHandle] = newPoint;
-        
-        // go through each pixel and update image
-        // var index = 0;
-        // for(var i = 0; i < imageWidth; i++){
-        //   for(var j = 0; j < imageHeight; j++){
-        //     console.log(i, j);
-        //     var pixelInfo = copiedPixel(i, j);
-        //     if(pixelInfo == null) {
-        //       // currentImageData.data[index] = ogImageData.data[index];
-        //       // currentImageData.data[index + 1] = ogImageData.data[index + 1];
-        //       // currentImageData.data[index + 2] = ogImageData.data[index + 2];
-        //       // currentImageData.data[index + 3] = ogImageData.data[index + 3];
-
-        //       // //modify the 2d array too
-        //       // currentImageData2D[i][j] = ogImageData2D[i][j].copy();
-        //       continue;
-        //     }
-        //     console.log("hit")
-        //     currentImageData.data[index] = pixelInfo.x;
-        //     currentImageData.data[index + 1] = pixelInfo.y;
-        //     currentImageData.data[index + 2] = pixelInfo.z;
-        //     currentImageData.data[index + 3] = pixelInfo.w;
-            
-        //     //modify the 2d array too
-        //     currentImageData2D[i][j] = pixelInfo;
-
-
-        //     index+=4;
-        //   }
-        // }
 
         // draw the new image on the canvas
-        
-        var index = 0;
-        context.clearRect(0, 0, canvas.width,canvas.height);
-        makeCage();
-        for(var i = 0; i < canvas.width; i++){
-          for(var j = 0; j < canvas.height; j++){
-            //console.log(i, j);
-            var pixelInfo = copiedPixel(i, j);
-            if(pixelInfo == null) {
-              continue;
-            }
-            var r = pixelInfo.x;
-            var g = pixelInfo.y;
-            var b = pixelInfo.z;
-            var a = pixelInfo.w;
-            
-            
-           
-            context.fillStyle = "rgba("+r+","+g+","+b+","+(a/255)+")";
-            //context.fillStyle = "black";
-            context.fillRect( i, j, 1, 1 );
-            index+=4;
-          }
-        }
-
-        //currentImageData = newImageData;
+        drawDeformedImage();
     
         // handle is changed, so turn back into false
         isChangingHandle = false;
         highlightedHandle = -1;
+        makeCage();
       }
       // if not, then change highlighted back to -1
       else {
@@ -141,9 +90,6 @@ document.getElementById('textCanvas').onclick = function clickEvent(e) {
       }
       
     }
-
-    
-
 
   }
 
@@ -162,16 +108,122 @@ document.addEventListener('keydown', (event) => {
     isSetUp = false;
   }
 
-  if(keyName === 'f'){
-    testModify();
+  // add a keyframe if it's not setup mode
+  if(keyName === 'k' && !isSetUp){
+    console.log("current cage vertex", cageVertices);
+    var currentCage = [];
+    for(var i = 0; i < cageVertices.length; i++){
+      currentCage.push(cageVertices[i]);
+    }
+    all_cages.push(currentCage);
+    console.log("all_cages", all_cages);
+
   }
+
+
+  if(keyName === '1'){
+    var newCage = [];
+    for(var i = 0; i < all_cages[1].length; i++){
+      newCage.push(all_cages[1][i]);
+    }
+    cageVertices = newCage;
+    context.clearRect(0, 0, canvas.width,canvas.height);
+    console.log("cage vertex" , cageVertices);
+    makeCage();
+    drawDeformedImage();
+  }
+  
+
+  // play animations of all current keyframes if not in setup mode
+  if(keyName === 'p' && !isSetUp){
+    var dT = 0.1
+    for(var i = 0; i <= all_cages.length -1; i+=dT){
+      drawOneFrame(i);
+      pause(100);
+    }
+  }
+
 
 }, false);
 
 
 
 
+
 // helper methods
+
+//draw a frame at time i
+function drawOneFrame(i) {
+
+  var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
+  var context = canvas.getContext('2d');
+
+  console.log("rendering at time: ", i);
+  var newCageVertices = setPose(i);
+  console.log(cageVertices, newCageVertices);
+  var newCage = [];
+  for(var index = 0; index < newCageVertices.length; index++){
+    newCage.push(newCageVertices[index]);
+  }
+  cageVertices = newCage;
+  context.clearRect(0, 0, canvas.width,canvas.height);
+  makeCage();
+  drawDeformedImage();
+  console.log("made it");
+}
+
+
+/*
+setPose(time t):
+  compute the two keyframes F1, F2 that straddle t
+  convert t to a number between 0 and 1, encoding how far t is between F1 and F2
+  for each bone i:
+    slerp T_i stored in F1 and F2
+    set the skeleton's T_i to the computed quaternion
+  update the whole skeleton's position, endpoint, and rotation values 
+
+
+  */
+function setPose(t) {
+    let F1Index = Math.floor(t);
+    let F2Index = Math.ceil(t);
+    
+    let F1 = all_cages[F1Index];
+    let F2 = all_cages[F2Index];
+
+    let time = t - Math.floor(t);
+
+    var lerpCageVertices = [];
+    for(var i = 0; i < cageVertices.length; i++){
+      // getting the vertex for each cage
+      let C_i1 : Vec2 = F1[i]
+      let C_i2 : Vec2 = F2[i];
+
+      // interpolate x
+      var newX = lerp(C_i1.x, C_i2.x, time);
+      // interpolate y
+      var newY = lerp(C_i1.y, C_i2.y, time);
+      
+      // create new vertex for new cage
+      var newVertex : Vec2 = new Vec2();
+      newVertex.x = newX;
+      newVertex.y = newY;
+
+      // add it to array
+      console.log(C_i1, C_i2, newVertex);
+      lerpCageVertices.push(newVertex);
+
+    }
+  
+    return lerpCageVertices;
+  
+}
+
+
+function lerp(a, b, amount){
+  return (1 - amount) * a + amount * b;
+}
+
 
 function copiedPixel(pixelNumX, pixelNumY) {
   var coordX = pixelNumX; //+ imageStartX;
@@ -188,29 +240,21 @@ function copiedPixel(pixelNumX, pixelNumY) {
   var baryCoords = meanValCoordinates(cageVertices, P_coords);
   var sum = 0;
   for (let i = 0; i < baryCoords.length; i++) {
-    if(baryCoords[i] < 0 || baryCoords[i] > 1) return null;
+    if(baryCoords[i] < 0 || baryCoords[i] > 1) {
+      return null;
+    }
     sum+=(baryCoords[i]);
     if(pixelNumX == 0 && pixelNumY == 0){
       console.log(baryCoords[i]);
     }
     
   }
-  if(sum > 1) return null;
-  // if(baryCoords[1] > 1 ||  baryCoords[2] > 1){
-  //   return null;
-  // }
-  // if(baryCoords[1] + baryCoords[2] > 1){
-  //   return null;
-  // }
+  if(sum > 1 + epsilon) {
+    return null;
+  }
 
   // look up point with same coordinates on
   // undeformed shape
-  // var U = baryCoords[0];
-  // var V = baryCoords[1];
-  // var W = 1 - U - V;
-  // var newCoordsX = ogCageVertices[0].x*U + ogCageVertices[1].x*V + ogCageVertices[2].x*W;
-  // var newCoordsY = ogCageVertices[0].y*U + ogCageVertices[1].y*V + ogCageVertices[2].y*W;
-
   var newCoordsX = 0;
   var newCoordsY = 0;
   for(var i = 0; i < baryCoords.length; i++){
@@ -230,25 +274,39 @@ function copiedPixel(pixelNumX, pixelNumY) {
       rgba.z = ogImageData2D[newPixelY][newPixelX].z;
       rgba.w = ogImageData2D[newPixelY][newPixelX].w;
       return rgba;
+    } 
+  }
+  return null;
+
+}
+
+// function that will draw the image based on the deformed cage currently stored in cageVerticies
+function drawDeformedImage(){
+
+  var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
+  var context = canvas.getContext('2d');
+
+  var index = 0;
+  context.clearRect(0, 0, canvas.width,canvas.height);
+  makeCage();
+  for(var i = 0; i < canvas.width; i++){
+    for(var j = 0; j < canvas.height; j++){
+      //console.log(i, j);
+      var pixelInfo = copiedPixel(i, j);
+      if(pixelInfo == null) {
+        continue;
+      }
+      var r = pixelInfo.x;
+      var g = pixelInfo.y;
+      var b = pixelInfo.z;
+      var a = pixelInfo.w;
+    
+      context.fillStyle = "rgba("+r+","+g+","+b+","+(a/255)+")";
+      //context.fillStyle = "black";
+      context.fillRect( i, j, 1, 1 );
+      index+=4;
     }
   }
-  // var index = 0;
-  // for(var i = 0; i < imageWidth; i++){
-  //   for(var j = 0; j < imageHeight; j++){
-  //     if(i == newPixelX && j == newPixelY){
-  //       var rgba = new Vec4();
-  //       rgba[0] = ogImageData.data[index];
-  //       rgba[1] = ogImageData.data[index + 1];
-  //       rgba[2] = ogImageData.data[index + 2];
-  //       rgba[3] = ogImageData.data[index + 3];
-  //       return rgba;
-  //     }
-
-  //     index+=4;
-  //   }
-  // }
-  return rgba;
-
 }
 
 
@@ -268,28 +326,25 @@ function getBaryCoord(P_coords : Vec2){
   var U = CAP_triangle / ABC_triangle;
   var V = ABP_triangle / ABC_triangle;
 
-  //return [U, V, 1 - U - V];
-  //return [V, U, 1 - U - V];
-  //return [ 1 - U - V, V, U];
   return [ 1 - U - V, U, V];
 
 }
 
 
 
-function testModify() {
+function colorEntire() {
   var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
   var context = canvas.getContext('2d');
-  const image = document.getElementById('source') as HTMLImageElement;
 
-  var image_data = context.getImageData(imageStartX, imageStartY, imageWidth, imageHeight);
-  
-  for(var i = 0; i < image_data.data.length; i++){
-    if((i + 1) % 4 == 0) continue;
-    image_data.data[i] = 255 - image_data.data[i];
+  var index = 0;
+  for(var i = 0; i < canvas.width; i++){
+    for(var j = 0; j < canvas.height; j++){
+      //context.fillStyle = "rgba("+0+","+0+","+1+","+(255/255)+")";
+      context.fillStyle = "blue";
+      context.fillRect( i, j, 1, 1 );
+      index+=4;
+    }
   }
-  currentImageData = image_data;
-  rerenderImage();
 
 }
 
@@ -329,32 +384,7 @@ function initImage(){
     ogImageData2D.push(currentRow2);
   }
 
-  // initalize the imageDataObjs
-  currentImageData = context.getImageData(imageStartX, imageStartY, imageWidth, imageHeight);
-  ogImageData = context.getImageData(imageStartX, imageStartY, imageWidth, imageHeight);
 }
-
-
-// re-render image according to modified cage
-function rerenderImage() {
-  var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
-  var context = canvas.getContext('2d');
-  context.clearRect(0, 0, canvas.width,canvas.height);
-  makeCage();
-  loadImage(currentImageData);
-}
-
-// load image based on image_data
-function loadImage(image_data){
-  var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
-  var context = canvas.getContext('2d');
-  Promise.all([
-    createImageBitmap(image_data)
-  ]).then(function(bitmaps) {
-    context.drawImage(bitmaps[0], imageStartX, imageStartY, imageWidth, imageHeight);
-  });
-}
-
 
 function makeCage() {
   var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
@@ -561,4 +591,13 @@ function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
   // }
 }
 
+// cite: https://stackoverflow.com/questions/951021/what-is-the-javascript-version-of-sleep
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function pause(ms) {
+  await sleep(ms);
+}
 
