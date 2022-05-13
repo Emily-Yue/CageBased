@@ -449,6 +449,7 @@ function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
   let ri, rp, Ai, Di, dl, mu; // distance
   let eps = 0.0000001;
 
+  // check for any coords close to cage point
   for (let i = 0; i < nSize; i++) {
     ip = (i+1)%nSize;
     ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
