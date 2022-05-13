@@ -110,13 +110,11 @@ document.addEventListener('keydown', (event) => {
 
   // add a keyframe if it's not setup mode
   if(keyName === 'k' && !isSetUp){
-    console.log("current cage vertex", cageVertices);
     var currentCage = [];
     for(var i = 0; i < cageVertices.length; i++){
       currentCage.push(cageVertices[i]);
     }
     all_cages.push(currentCage);
-    console.log("all_cages", all_cages);
 
   }
 
@@ -145,6 +143,15 @@ document.addEventListener('keydown', (event) => {
 
 
 
+
+
+
+
+
+
+
+// helper methods
+
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -156,20 +163,12 @@ async function animate() {
   }
 }
 
-
-
-
-
-
-// helper methods
-
 //draw a frame at time i
 function drawOneFrame(i) {
 
   var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
   var context = canvas.getContext('2d');
 
-  console.log("rendering at time: ", i);
   var newCageVertices = setPose(i);
   var newCage = [];
   for(var index = 0; index < newCageVertices.length; index++){
@@ -182,17 +181,6 @@ function drawOneFrame(i) {
 }
 
 
-/*
-setPose(time t):
-  compute the two keyframes F1, F2 that straddle t
-  convert t to a number between 0 and 1, encoding how far t is between F1 and F2
-  for each bone i:
-    slerp T_i stored in F1 and F2
-    set the skeleton's T_i to the computed quaternion
-  update the whole skeleton's position, endpoint, and rotation values 
-
-
-  */
 function setPose(t) {
     let F1Index = Math.floor(t);
     let F2Index = Math.ceil(t);
@@ -235,17 +223,15 @@ function lerp(a, b, amount){
 
 
 function copiedPixel(pixelNumX, pixelNumY) {
-  var coordX = pixelNumX; //+ imageStartX;
-  var coordY = pixelNumY; //  + imageStartY;
+  var coordX = pixelNumX; 
+  var coordY = pixelNumY; 
 
   var P_coords = new Vec2();
   P_coords.x = coordX;
   P_coords.y = coordY;
-  //console.log(P_coords.x, P_coords.y);
   
   
-  // find its barycentric coordinates
-  //var baryCoords = getBaryCoord(P_coords);
+  // find its generalized barycentric coordinates (mean value coordinates)
   var baryCoords = meanValCoordinates(cageVertices, P_coords);
   var sum = 0;
   for (let i = 0; i < baryCoords.length; i++) {
@@ -272,7 +258,6 @@ function copiedPixel(pixelNumX, pixelNumY) {
   }
   var newPixelX = Math.floor(newCoordsX - imageStartX);
   var newPixelY = Math.floor(newCoordsY - imageStartY);
-  //console.log(newPixelX, newPixelY);
 
   // copy pixel at that point
   var rgba = new Vec4();
@@ -300,7 +285,6 @@ function drawDeformedImage(){
   makeCage();
   for(var i = 0; i < canvas.width; i++){
     for(var j = 0; j < canvas.height; j++){
-      //console.log(i, j);
       var pixelInfo = copiedPixel(i, j);
       if(pixelInfo == null) {
         continue;
@@ -311,51 +295,12 @@ function drawDeformedImage(){
       var a = pixelInfo.w;
     
       context.fillStyle = "rgba("+r+","+g+","+b+","+(a/255)+")";
-      //context.fillStyle = "black";
       context.fillRect( i, j, 1, 1 );
       index+=4;
     }
   }
 }
 
-
-function getBaryCoord(P_coords : Vec2){
-  var a_coords : Vec2 = cageVertices[0];
-	var b_coords : Vec2 = cageVertices[1];
-  var c_coords : Vec2 = cageVertices[2];
-
-  var vab = Vec2.difference(b_coords, a_coords);
-  var vca = Vec2.difference(a_coords, c_coords);
-  var vac = Vec2.difference(c_coords, a_coords);
-  var vap = Vec2.difference(P_coords, a_coords);
-  var CAP_triangle = (Vec2.cross(vca, vap)).length() / 2.0;
-  var ABP_triangle = (Vec2.cross(vab, vap)).length() / 2.0;
-  var ABC_triangle = (Vec2.cross(vab, vac)).length() / 2.0;
-
-  var U = CAP_triangle / ABC_triangle;
-  var V = ABP_triangle / ABC_triangle;
-
-  return [ 1 - U - V, U, V];
-
-}
-
-
-
-function colorEntire() {
-  var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
-  var context = canvas.getContext('2d');
-
-  var index = 0;
-  for(var i = 0; i < canvas.width; i++){
-    for(var j = 0; j < canvas.height; j++){
-      //context.fillStyle = "rgba("+0+","+0+","+1+","+(255/255)+")";
-      context.fillStyle = "blue";
-      context.fillRect( i, j, 1, 1 );
-      index+=4;
-    }
-  }
-
-}
 
 // initial image that is rendered
 function initImage(){
