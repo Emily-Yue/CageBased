@@ -1,4 +1,4 @@
-import { Mat4, Vec4, Vec3, Vec2 } from "../lib/TSM.js";
+import { Mat4, Vec4, Vec3, Vec2, epsilon } from "../lib/TSM.js";
 
 
 var isSetUp = true;
@@ -107,12 +107,15 @@ document.getElementById('textCanvas').onclick = function clickEvent(e) {
         
         var index = 0;
         context.clearRect(0, 0, canvas.width,canvas.height);
+        //colorEntire();
         makeCage();
         for(var i = 0; i < canvas.width; i++){
           for(var j = 0; j < canvas.height; j++){
             //console.log(i, j);
             var pixelInfo = copiedPixel(i, j);
             if(pixelInfo == null) {
+              // context.fillStyle = "pink";
+              // context.fillRect( i, j, 1, 1 );
               continue;
             }
             var r = pixelInfo.x;
@@ -171,6 +174,7 @@ document.addEventListener('keydown', (event) => {
 
 
 
+
 // helper methods
 
 function copiedPixel(pixelNumX, pixelNumY) {
@@ -188,29 +192,21 @@ function copiedPixel(pixelNumX, pixelNumY) {
   var baryCoords = meanValCoordinates(cageVertices, P_coords);
   var sum = 0;
   for (let i = 0; i < baryCoords.length; i++) {
-    if(baryCoords[i] < 0 || baryCoords[i] > 1) return null;
+    if(baryCoords[i] < 0 || baryCoords[i] > 1) {
+      return null;
+    }
     sum+=(baryCoords[i]);
     if(pixelNumX == 0 && pixelNumY == 0){
       console.log(baryCoords[i]);
     }
     
   }
-  if(sum > 1) return null;
-  // if(baryCoords[1] > 1 ||  baryCoords[2] > 1){
-  //   return null;
-  // }
-  // if(baryCoords[1] + baryCoords[2] > 1){
-  //   return null;
-  // }
+  if(sum > 1 + epsilon) {
+    return null;
+  }
 
   // look up point with same coordinates on
   // undeformed shape
-  // var U = baryCoords[0];
-  // var V = baryCoords[1];
-  // var W = 1 - U - V;
-  // var newCoordsX = ogCageVertices[0].x*U + ogCageVertices[1].x*V + ogCageVertices[2].x*W;
-  // var newCoordsY = ogCageVertices[0].y*U + ogCageVertices[1].y*V + ogCageVertices[2].y*W;
-
   var newCoordsX = 0;
   var newCoordsY = 0;
   for(var i = 0; i < baryCoords.length; i++){
@@ -230,24 +226,9 @@ function copiedPixel(pixelNumX, pixelNumY) {
       rgba.z = ogImageData2D[newPixelY][newPixelX].z;
       rgba.w = ogImageData2D[newPixelY][newPixelX].w;
       return rgba;
-    }
+    } 
   }
-  // var index = 0;
-  // for(var i = 0; i < imageWidth; i++){
-  //   for(var j = 0; j < imageHeight; j++){
-  //     if(i == newPixelX && j == newPixelY){
-  //       var rgba = new Vec4();
-  //       rgba[0] = ogImageData.data[index];
-  //       rgba[1] = ogImageData.data[index + 1];
-  //       rgba[2] = ogImageData.data[index + 2];
-  //       rgba[3] = ogImageData.data[index + 3];
-  //       return rgba;
-  //     }
-
-  //     index+=4;
-  //   }
-  // }
-  return rgba;
+  return null;
 
 }
 
@@ -268,9 +249,6 @@ function getBaryCoord(P_coords : Vec2){
   var U = CAP_triangle / ABC_triangle;
   var V = ABP_triangle / ABC_triangle;
 
-  //return [U, V, 1 - U - V];
-  //return [V, U, 1 - U - V];
-  //return [ 1 - U - V, V, U];
   return [ 1 - U - V, U, V];
 
 }
@@ -290,6 +268,22 @@ function testModify() {
   }
   currentImageData = image_data;
   rerenderImage();
+
+}
+
+function colorEntire() {
+  var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
+  var context = canvas.getContext('2d');
+
+  var index = 0;
+  for(var i = 0; i < canvas.width; i++){
+    for(var j = 0; j < canvas.height; j++){
+      //context.fillStyle = "rgba("+0+","+0+","+1+","+(255/255)+")";
+      context.fillStyle = "blue";
+      context.fillRect( i, j, 1, 1 );
+      index+=4;
+    }
+  }
 
 }
 
