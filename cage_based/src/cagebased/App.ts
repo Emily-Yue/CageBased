@@ -171,10 +171,10 @@ function copiedPixel(pixelNumX, pixelNumY) {
     for(var j = 0; j < imageHeight; j++){
       if(i == newPixelX && j == newPixelY){
         var rgba = new Vec4();
-        rgba[0] = ogImageData.data[index];
-        rgba[1] = ogImageData.data[index + 1];
-        rgba[2] = ogImageData.data[index + 2];
-        rgba[3] = ogImageData.data[index + 3];
+        rgba.x = ogImageData.data[index];
+        rgba.y = ogImageData.data[index + 1];
+        rgba.z = ogImageData.data[index + 2];
+        rgba.w = ogImageData.data[index + 3];
         return rgba;
       }
 
@@ -364,6 +364,7 @@ function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
   let ri, rp, Ai, Di, dl, mu; // distance
   let eps = 0.0000001;
 
+  // check for any coords close to cage point
   for (let i = 0; i < nSize; i++) {
     ip = (i+1)%nSize;
     ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
