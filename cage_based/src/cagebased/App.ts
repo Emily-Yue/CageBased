@@ -7,12 +7,14 @@ var cageVertices  = [];
 var ogCageVertices = [];
 var currentImageData = null;
 var ogImageData = null;
+var currentImageData2D = [];
+var ogImageData2D = [];
 var highlightedHandle = -1;
 
 var imageWidth = 200;
 var imageHeight = 100;
-var imageStartX = 200;
-var imageStartY = 200;
+var imageStartX = 400;
+var imageStartY = 400;
 
 // our "main" function
 export function initializeCanvas() {
@@ -58,6 +60,9 @@ document.getElementById('textCanvas').onclick = function clickEvent(e) {
     if(pointSelected != -1) {
       isChangingHandle = true; 
       highlightedHandle = pointSelected; 
+      // rerender canvas
+      //rerenderImage();
+      makeCage();
     } else {
       // if currently in chaning handle mode
       if(isChangingHandle){
@@ -69,21 +74,62 @@ document.getElementById('textCanvas').onclick = function clickEvent(e) {
         cageVertices[highlightedHandle] = newPoint;
         
         // go through each pixel and update image
-        var hit_count = 0;
+        // var index = 0;
+        // for(var i = 0; i < imageWidth; i++){
+        //   for(var j = 0; j < imageHeight; j++){
+        //     console.log(i, j);
+        //     var pixelInfo = copiedPixel(i, j);
+        //     if(pixelInfo == null) {
+        //       // currentImageData.data[index] = ogImageData.data[index];
+        //       // currentImageData.data[index + 1] = ogImageData.data[index + 1];
+        //       // currentImageData.data[index + 2] = ogImageData.data[index + 2];
+        //       // currentImageData.data[index + 3] = ogImageData.data[index + 3];
+
+        //       // //modify the 2d array too
+        //       // currentImageData2D[i][j] = ogImageData2D[i][j].copy();
+        //       continue;
+        //     }
+        //     console.log("hit")
+        //     currentImageData.data[index] = pixelInfo.x;
+        //     currentImageData.data[index + 1] = pixelInfo.y;
+        //     currentImageData.data[index + 2] = pixelInfo.z;
+        //     currentImageData.data[index + 3] = pixelInfo.w;
+            
+        //     //modify the 2d array too
+        //     currentImageData2D[i][j] = pixelInfo;
+
+
+        //     index+=4;
+        //   }
+        // }
+
+        // draw the new image on the canvas
+        
         var index = 0;
-        for(var i = 0; i < imageWidth; i++){
-          for(var j = 0; j < imageHeight; j++){
-            console.log(i, j);
+        context.clearRect(0, 0, canvas.width,canvas.height);
+        makeCage();
+        for(var i = 0; i < canvas.width; i++){
+          for(var j = 0; j < canvas.height; j++){
+            //console.log(i, j);
             var pixelInfo = copiedPixel(i, j);
-            if(pixelInfo == null) continue;
-            hit_count++;
-            currentImageData.data[index] = pixelInfo[0];
-            currentImageData.data[index + 1] = pixelInfo[1];
-            currentImageData.data[index + 2] = pixelInfo[2];
-            currentImageData.data[index + 3] = pixelInfo[3];
+            if(pixelInfo == null) {
+              continue;
+            }
+            var r = pixelInfo.x;
+            var g = pixelInfo.y;
+            var b = pixelInfo.z;
+            var a = pixelInfo.w;
+            
+            
+           
+            context.fillStyle = "rgba("+r+","+g+","+b+","+(a/255)+")";
+            //context.fillStyle = "black";
+            context.fillRect( i, j, 1, 1 );
             index+=4;
           }
         }
+
+        //currentImageData = newImageData;
     
         // handle is changed, so turn back into false
         isChangingHandle = false;
@@ -96,8 +142,7 @@ document.getElementById('textCanvas').onclick = function clickEvent(e) {
       
     }
 
-    // rerender canvas
-    rerenderImage();
+    
 
 
   }
@@ -129,20 +174,34 @@ document.addEventListener('keydown', (event) => {
 // helper methods
 
 function copiedPixel(pixelNumX, pixelNumY) {
-  var coordX = pixelNumX + imageStartX;
-  var coordY = pixelNumY + imageStartY;
+  var coordX = pixelNumX; //+ imageStartX;
+  var coordY = pixelNumY; //  + imageStartY;
 
   var P_coords = new Vec2();
   P_coords.x = coordX;
   P_coords.y = coordY;
+  //console.log(P_coords.x, P_coords.y);
   
-  console.log(P_coords.x, P_coords.y);
+  
   // find its barycentric coordinates
-  var baryCoords = getBaryCoord(P_coords);
-  //var baryCoords = meanValCoordinates(cageVertices, P_coords);
+  //var baryCoords = getBaryCoord(P_coords);
+  var baryCoords = meanValCoordinates(cageVertices, P_coords);
+  var sum = 0;
   for (let i = 0; i < baryCoords.length; i++) {
-    console.log(baryCoords[i]);
+    if(baryCoords[i] < 0 || baryCoords[i] > 1) return null;
+    sum+=(baryCoords[i]);
+    if(pixelNumX == 0 && pixelNumY == 0){
+      console.log(baryCoords[i]);
+    }
+    
   }
+  if(sum > 1) return null;
+  // if(baryCoords[1] > 1 ||  baryCoords[2] > 1){
+  //   return null;
+  // }
+  // if(baryCoords[1] + baryCoords[2] > 1){
+  //   return null;
+  // }
 
   // look up point with same coordinates on
   // undeformed shape
@@ -156,36 +215,39 @@ function copiedPixel(pixelNumX, pixelNumY) {
   var newCoordsY = 0;
   for(var i = 0; i < baryCoords.length; i++){
     newCoordsX+=(ogCageVertices[i].x*baryCoords[i]);
-    newCoordsY+=(ogCageVertices[i].x*baryCoords[i]);
+    newCoordsY+=(ogCageVertices[i].y*baryCoords[i]);
   }
   var newPixelX = Math.floor(newCoordsX - imageStartX);
   var newPixelY = Math.floor(newCoordsY - imageStartY);
-  console.log(newPixelX, newPixelY);
-
-
+  //console.log(newPixelX, newPixelY);
 
   // copy pixel at that point
   var rgba = new Vec4();
-  var index = 0;
-  for(var i = 0; i < imageWidth; i++){
-    for(var j = 0; j < imageHeight; j++){
-      if(i == newPixelX && j == newPixelY){
-        var rgba = new Vec4();
-        rgba.x = ogImageData.data[index];
-        rgba.y = ogImageData.data[index + 1];
-        rgba.z = ogImageData.data[index + 2];
-        rgba.w = ogImageData.data[index + 3];
-        return rgba;
-      }
-
-      index+=4;
+  if(newPixelX >= 0 && newPixelX < imageWidth){
+    if(newPixelY >= 0 && newPixelY < imageHeight){
+      rgba.x = ogImageData2D[newPixelY][newPixelX].x;
+      rgba.y = ogImageData2D[newPixelY][newPixelX].y;
+      rgba.z = ogImageData2D[newPixelY][newPixelX].z;
+      rgba.w = ogImageData2D[newPixelY][newPixelX].w;
+      return rgba;
     }
   }
+  // var index = 0;
+  // for(var i = 0; i < imageWidth; i++){
+  //   for(var j = 0; j < imageHeight; j++){
+  //     if(i == newPixelX && j == newPixelY){
+  //       var rgba = new Vec4();
+  //       rgba[0] = ogImageData.data[index];
+  //       rgba[1] = ogImageData.data[index + 1];
+  //       rgba[2] = ogImageData.data[index + 2];
+  //       rgba[3] = ogImageData.data[index + 3];
+  //       return rgba;
+  //     }
 
-  return null;
-  
-
-
+  //     index+=4;
+  //   }
+  // }
+  return rgba;
 
 }
 
@@ -208,8 +270,8 @@ function getBaryCoord(P_coords : Vec2){
 
   //return [U, V, 1 - U - V];
   //return [V, U, 1 - U - V];
-  return [ 1 - U - V, V, U];
-  // return [ 1 - U - V, U, V];
+  //return [ 1 - U - V, V, U];
+  return [ 1 - U - V, U, V];
 
 }
 
@@ -236,7 +298,38 @@ function initImage(){
   var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
   var context = canvas.getContext('2d');
   const image = document.getElementById('source') as HTMLImageElement;
+
+  // draw the image
   context.drawImage(image, imageStartX, imageStartY, imageWidth, imageHeight);
+
+  // initialize the 2d arrays
+  var currentImageDataObj = context.getImageData(imageStartX, imageStartY, imageWidth, imageHeight);
+  var index = 0;
+  for(var i = 0; i < imageHeight; i++){
+    var currentRow = [];
+    var currentRow2 = [];
+    for(var j = 0; j < imageWidth; j++){
+      var pixel = new Vec4();
+      var pixel2 = new Vec4();
+      pixel.x = currentImageDataObj.data[index];
+      pixel.y = currentImageDataObj.data[index + 1];
+      pixel.z = currentImageDataObj.data[index + 2];
+      pixel.w = currentImageDataObj.data[index + 3];
+      currentRow.push(pixel);
+
+      pixel2.x = currentImageDataObj.data[index];
+      pixel2.y = currentImageDataObj.data[index + 1];
+      pixel2.z = currentImageDataObj.data[index + 2];
+      pixel2.w = currentImageDataObj.data[index + 3];
+      currentRow2.push(pixel2);
+      
+      index+=4;
+    }
+    currentImageData2D.push(currentRow);
+    ogImageData2D.push(currentRow2);
+  }
+
+  // initalize the imageDataObjs
   currentImageData = context.getImageData(imageStartX, imageStartY, imageWidth, imageHeight);
   ogImageData = context.getImageData(imageStartX, imageStartY, imageWidth, imageHeight);
 }
@@ -249,8 +342,6 @@ function rerenderImage() {
   context.clearRect(0, 0, canvas.width,canvas.height);
   makeCage();
   loadImage(currentImageData);
-  //initImage();
-  
 }
 
 // load image based on image_data
