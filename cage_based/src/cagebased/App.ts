@@ -120,15 +120,15 @@ document.addEventListener('keydown', (event) => {
 
   }
 
+  var keyNameNum = parseInt(keyName);
 
-  if(keyName === '1'){
+  if(keyNameNum >= 0 && keyNameNum < all_cages.length){
     var newCage = [];
-    for(var i = 0; i < all_cages[1].length; i++){
-      newCage.push(all_cages[1][i]);
+    for(var i = 0; i < all_cages[keyNameNum].length; i++){
+      newCage.push(all_cages[keyNameNum][i]);
     }
     cageVertices = newCage;
     context.clearRect(0, 0, canvas.width,canvas.height);
-    console.log("cage vertex" , cageVertices);
     makeCage();
     drawDeformedImage();
   }
@@ -136,15 +136,26 @@ document.addEventListener('keydown', (event) => {
 
   // play animations of all current keyframes if not in setup mode
   if(keyName === 'p' && !isSetUp){
-    var dT = 0.1
-    for(var i = 0; i <= all_cages.length -1; i+=dT){
-      drawOneFrame(i);
-      pause(100);
-    }
+    animate();
   }
 
 
 }, false);
+
+
+
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+async function animate() {
+  var dT = 0.1
+  for (var i = 0; i <= all_cages.length -1; i+=dT) {        
+    await sleep(10);
+    drawOneFrame(i);
+  }
+}
+
 
 
 
@@ -160,7 +171,6 @@ function drawOneFrame(i) {
 
   console.log("rendering at time: ", i);
   var newCageVertices = setPose(i);
-  console.log(cageVertices, newCageVertices);
   var newCage = [];
   for(var index = 0; index < newCageVertices.length; index++){
     newCage.push(newCageVertices[index]);
@@ -169,7 +179,6 @@ function drawOneFrame(i) {
   context.clearRect(0, 0, canvas.width,canvas.height);
   makeCage();
   drawDeformedImage();
-  console.log("made it");
 }
 
 
@@ -593,11 +602,11 @@ function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
 
 // cite: https://stackoverflow.com/questions/951021/what-is-the-javascript-version-of-sleep
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+// function sleep(ms) {
+//   return new Promise(resolve => setTimeout(resolve, ms));
+// }
 
-async function pause(ms) {
-  await sleep(ms);
-}
+// async function pause(ms) {
+//   await sleep(ms);
+// }
 
