@@ -138,15 +138,6 @@ document.addEventListener('keydown', (event) => {
 }, false);
 
 
-
-
-
-
-
-
-
-
-
 // helper methods
 
 function sleep(ms) {
@@ -294,11 +285,9 @@ function drawDeformedImage(){
   maxX = Math.floor(maxX);
   maxY = Math.floor(maxY);
 
-  // for(var i = 0; i < canvas.width; i++){
-  //   for(var j = 0; j < canvas.height; j++){
   for (let i = minX; i < maxX; i++) {
    for (let j = minY; j < maxY; j++) {
-      var pixelInfo =  copiedPixel(i, j); //new Vec4();
+      var pixelInfo =  copiedPixel(i, j); 
       if(pixelInfo == null) {
         continue;
       }
@@ -308,8 +297,7 @@ function drawDeformedImage(){
       var a = pixelInfo.w;
     
       context.fillStyle = "rgba("+r+","+g+","+b+","+(a/255)+")";
-      // context.fillStyle = "rgba("+r+","+g+","+b+","+(a)+")";
-      //context.fillStyle = "blue";
+
       context.fillRect( i, j, 1, 1 );
       index+=4;
     }
