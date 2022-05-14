@@ -10,7 +10,6 @@ var cageVertices  = [];
 var ogCageVertices = [];
 
 // image data
-var currentImageData2D = [];
 var ogImageData2D = [];
 
 // UI
@@ -21,8 +20,6 @@ var imageWidth = 200;
 var imageHeight = 100;
 var imageStartX = 400;
 var imageStartY = 400;
-
-
 
 // keyframe stuff
 var all_cages = []
@@ -158,7 +155,7 @@ function sleep(ms) {
 async function animate() {
   var dT = 0.1
   for (var i = 0; i <= all_cages.length -1; i+=dT) {        
-    await sleep(1);
+    await sleep(100);
     drawOneFrame(i);
   }
 }
@@ -207,7 +204,6 @@ function setPose(t) {
       newVertex.y = newY;
 
       // add it to array
-      console.log(C_i1, C_i2, newVertex);
       lerpCageVertices.push(newVertex);
 
     }
@@ -239,10 +235,6 @@ function copiedPixel(pixelNumX, pixelNumY) {
       return null;
     }
     sum+=(baryCoords[i]);
-    if(pixelNumX == 0 && pixelNumY == 0){
-      console.log(baryCoords[i]);
-    }
-    
   }
   if(sum > 1 + epsilon) {
     return null;
@@ -285,24 +277,28 @@ function drawDeformedImage(){
   makeCage();
 
   // figure out bounding box of pixels to rerender on the canvas
-  // let minX: number = 0;
-  // let minY: number = 0;
-  // let maxX: number = canvas.width;
-  // let maxY: number = canvas.height;
-  // for (let v = 0; v < cageVertices.length; v++) {
-  //   let currV = cageVertices[v];
-  //   minX = Math.min(minX, currV.x);
-  //   minY = Math.min(minY, currV.y);
-  //   maxX = Math.max(maxX, currV.x);
-  //   maxY = Math.max(maxY, currV.y);
-  // }
+  let minX: number = cageVertices[0].x;
+  let minY: number = cageVertices[0].y;
+  let maxX: number = cageVertices[0].x;
+  let maxY: number = cageVertices[0].y;
+  for (let v = 0; v < cageVertices.length; v++) {
+    let currV = cageVertices[v].copy();
+    minX = Math.min(minX, currV.x);
+    minY = Math.min(minY, currV.y);
+    maxX = Math.max(maxX, currV.x);
+    maxY = Math.max(maxY, currV.y);
+  }
 
-  for(var i = 0; i < canvas.width; i++){
-    for(var j = 0; j < canvas.height; j++){
-  //for (let i = minX; i < maxX; i++) {
-  //  for (let j = minY; j < maxY; j++) {
-      //console.log(i, j);
-      var pixelInfo = copiedPixel(i, j);
+  minX = Math.floor(minX);
+  minY = Math.floor(minY);
+  maxX = Math.floor(maxX);
+  maxY = Math.floor(maxY);
+
+  // for(var i = 0; i < canvas.width; i++){
+  //   for(var j = 0; j < canvas.height; j++){
+  for (let i = minX; i < maxX; i++) {
+   for (let j = minY; j < maxY; j++) {
+      var pixelInfo =  copiedPixel(i, j); //new Vec4();
       if(pixelInfo == null) {
         continue;
       }
@@ -312,10 +308,14 @@ function drawDeformedImage(){
       var a = pixelInfo.w;
     
       context.fillStyle = "rgba("+r+","+g+","+b+","+(a/255)+")";
+      // context.fillStyle = "rgba("+r+","+g+","+b+","+(a)+")";
+      //context.fillStyle = "blue";
       context.fillRect( i, j, 1, 1 );
       index+=4;
     }
   }
+
+
 }
 
 
@@ -351,7 +351,6 @@ function initImage(){
       
       index+=4;
     }
-    currentImageData2D.push(currentRow);
     ogImageData2D.push(currentRow2);
   }
 
@@ -510,65 +509,5 @@ function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
   }
 
   return baryCoordinates;
-
-  // for (let i = 0; i < nSize; i++) {
-  //   ip = (i+1)%nSize;
-  //   ri = Math.sqrt(s[i].x * s[i].x + s[i].y * s[i].y);
-  //   Ai = 0.5*(s[i].x * s[ip].y - s[ip].x * s[i].y);
-  //   Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
-
-  //   if (ri <= eps) {
-  //     baryCoordinates[i] = 1.0;
-  //     return baryCoordinates;
-  //   } else if (Math.abs(Ai) <= 0 && Di < 0.0) {
-  //     dx = cageCoords[ip].x - cageCoords[i].x;
-  //     dy = cageCoords[ip].y - cageCoords[i].y;
-  //     dl = Math.sqrt(dx*dx + dy*dy);
-      
-  //     dx = pointCoord.x - cageCoords[i].x;
-  //     dy = pointCoord.y - cageCoords[i].y;
-
-  //     mu = Math.sqrt(dx*dx + dy*dy)/dl;
-  //     baryCoordinates[i] = 1.0-mu;
-  //     baryCoordinates[ip] = mu;
-  //     return baryCoordinates;
-  //   }
-
-  //   let tanalpha: number[] = new Array(nSize);
-  //   for (let i = 0; i < nSize; i++) {
-  //     ip = (i+1) % nSize;
-  //     im = (nSize-1+i) % nSize;
-  //     ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
-  //     rp = Math.sqrt(s[ip].x*s[ip].x + s[ip].y*s[ip].y);
-  //     Ai = 0.5*(s[i].x*s[ip].y - s[ip].x*s[i].y);
-  //     Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
-  //     tanalpha[i] = (ri*rp - Di)/(2.0*Ai);
-  //   }
-
-  // if (Math.abs(wsum) > 0.0) {
-  //   for (let i = 0; i < nSize; i++) {
-  //     baryCoordinates[i] /= wsum;
-  //   }
-
-  //   if (Math.abs(wsum) > 0.0) {
-  //     for (let i = 0; i < nSize; i++) {
-  //       baryCoordinates[i] /= wsum;
-  //     }
-  //   }
-  //   console.log(baryCoordinates)
-  //   return baryCoordinates;
-  // }
-  //   return baryCoordinates;
-  // }
 }
-
-// cite: https://stackoverflow.com/questions/951021/what-is-the-javascript-version-of-sleep
-
-// function sleep(ms) {
-//   return new Promise(resolve => setTimeout(resolve, ms));
-// }
-
-// async function pause(ms) {
-//   await sleep(ms);
-// }
 
