@@ -14,3 +14,7 @@ press key 'p'.
 The contents of this submission includes:
 - A python file to compile the program
 - src folder that contain src files for the program
+
+Citations:
+- https://www.mn.uio.no/math/english/people/aca/michaelf/papers/barycentric.pdf
+- https://gist.github.com/zhangzhensong/e425a3baa5f70bcfea6c
