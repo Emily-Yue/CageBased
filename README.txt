@@ -1,3 +1,5 @@
+Names: Emily Yue and Arushi Harkawat
+
 This project is implementing cage-based 2D animation using mean-value coordinates. 
 
 To run this project:
@@ -14,6 +16,9 @@ press key 'p'.
 The contents of this submission includes:
 - A python file to compile the program
 - src folder that contain src files for the program
+
+
+On our honors, Emily and Arushi have done their eCIS for this class. 
 
 Citations:
 - https://www.mn.uio.no/math/english/people/aca/michaelf/papers/barycentric.pdf
