@@ -219,7 +219,7 @@ function copiedPixel(pixelNumX, pixelNumY) {
   
   
   // find its generalized barycentric coordinates (mean value coordinates)
-  var baryCoords = meanValCoordinates(cageVertices, P_coords);
+  var baryCoords = meanValCoordinates(P_coords);
   var sum = 0;
   for (let i = 0; i < baryCoords.length; i++) {
     if(baryCoords[i] < 0 || baryCoords[i] > 1) {
@@ -422,27 +422,29 @@ function drawPoint(context, x, y, label, color, size) {
   Reference Paper: Mean Value Coordinates for Arbitrary Planar Polygons
                    by Kai Hormann & Michael Floater
   cageCoords - coordinates of closed polygon cage
-  queryCoords - xy coordinates of the query point
+  pointCoord - xy coordinates of the query point
 */
-function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
-  const nSize = cageCoords.length;
+function meanValCoordinates(pointCoord: Vec2) : number[] {
+  const nSize = cageVertices.length;
   if (nSize <= 1) return;
   let dx, dy: number;
+
+  // storing distances of the points in s
   let s : Vec2[] = [];
-  
   for (let i = 0; i < nSize; i++) {
-    dx = cageCoords[i].x - pointCoord.x;
-    dy = cageCoords[i].y - pointCoord.y;
+    dx = cageVertices[i].x - pointCoord.x;
+    dy = cageVertices[i].y - pointCoord.y;
     s.push(new Vec2([dx, dy]));
   }
 
+  // initializing barycentric coordinates
   let baryCoordinates: number[] = [];
   for (let i = 0; i < nSize; i++) {
     baryCoordinates.push(0.0);
   }
 
-  let ip, im;
-  let ri, rp, Ai, Di, dl, mu; // distance
+  let ip, im; // ip=i+1, im=i-1
+  let ri, rp, Ai, Di, dl, mu; // distances
   let eps = 0.000001;
 
   // check for any coords close to cage point
@@ -457,12 +459,12 @@ function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
       return baryCoordinates;
     } 
     else if (Math.abs(Ai) <= 0 && Di < 0.0) {
-      dx = cageCoords[ip].x - cageCoords[i].x;
-      dy = cageCoords[ip].y - cageCoords[i].y;
+      dx = cageVertices[ip].x - cageVertices[i].x;
+      dy = cageVertices[ip].y - cageVertices[i].y;
       dl = Math.sqrt(dx*dx + dy*dy);
       
-      dx = pointCoord.x - cageCoords[i].x;
-      dy = pointCoord.y - cageCoords[i].y;
+      dx = pointCoord.x - cageVertices[i].x;
+      dy = pointCoord.y - cageVertices[i].y;
 
       mu = Math.sqrt(dx*dx + dy*dy)/dl;
       baryCoordinates[i] = 1.0-mu;
@@ -471,6 +473,7 @@ function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
     }
   }
 
+  // source/reference for tan(alpha/2) calculations: https://gist.github.com/zhangzhensong/e425a3baa5f70bcfea6c
   let tanalpha: number[] = new Array(nSize);
   for (let i = 0; i < nSize; i++) {
     ip = (i+1) % nSize;
