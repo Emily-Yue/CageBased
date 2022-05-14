@@ -431,6 +431,8 @@ function drawPoint(context, x, y, label, color, size) {
 }
 
 /* 
+  Reference Paper: Mean Value Coordinates for Arbitrary Planar Polygons
+                   by Kai Hormann & Michael Floater
   cageCoords - coordinates of closed polygon cage
   queryCoords - xy coordinates of the query point
 */
