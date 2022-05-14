@@ -10,7 +10,6 @@ var cageVertices  = [];
 var ogCageVertices = [];
 
 // image data
-var currentImageData2D = [];
 var ogImageData2D = [];
 
 // UI
@@ -21,8 +20,6 @@ var imageWidth = 200;
 var imageHeight = 100;
 var imageStartX = 400;
 var imageStartY = 400;
-
-
 
 // keyframe stuff
 var all_cages = []
@@ -110,13 +107,11 @@ document.addEventListener('keydown', (event) => {
 
   // add a keyframe if it's not setup mode
   if(keyName === 'k' && !isSetUp){
-    console.log("current cage vertex", cageVertices);
     var currentCage = [];
     for(var i = 0; i < cageVertices.length; i++){
       currentCage.push(cageVertices[i]);
     }
     all_cages.push(currentCage);
-    console.log("all_cages", all_cages);
 
   }
 
@@ -145,16 +140,7 @@ document.addEventListener('keydown', (event) => {
 
 
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-async function animate() {
-  var dT = 0.1
-  for (var i = 0; i <= all_cages.length -1; i+=dT) {        
-    await sleep(1);
-    drawOneFrame(i);
-  }
-}
+
 
 
 
@@ -163,13 +149,23 @@ async function animate() {
 
 // helper methods
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+async function animate() {
+  var dT = 0.1
+  for (var i = 0; i <= all_cages.length -1; i+=dT) {        
+    await sleep(100);
+    drawOneFrame(i);
+  }
+}
+
 //draw a frame at time i
 function drawOneFrame(i) {
 
   var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
   var context = canvas.getContext('2d');
 
-  console.log("rendering at time: ", i);
   var newCageVertices = setPose(i);
   var newCage = [];
   for(var index = 0; index < newCageVertices.length; index++){
@@ -182,17 +178,6 @@ function drawOneFrame(i) {
 }
 
 
-/*
-setPose(time t):
-  compute the two keyframes F1, F2 that straddle t
-  convert t to a number between 0 and 1, encoding how far t is between F1 and F2
-  for each bone i:
-    slerp T_i stored in F1 and F2
-    set the skeleton's T_i to the computed quaternion
-  update the whole skeleton's position, endpoint, and rotation values 
-
-
-  */
 function setPose(t) {
     let F1Index = Math.floor(t);
     let F2Index = Math.ceil(t);
@@ -219,7 +204,6 @@ function setPose(t) {
       newVertex.y = newY;
 
       // add it to array
-      console.log(C_i1, C_i2, newVertex);
       lerpCageVertices.push(newVertex);
 
     }
@@ -235,17 +219,15 @@ function lerp(a, b, amount){
 
 
 function copiedPixel(pixelNumX, pixelNumY) {
-  var coordX = pixelNumX; //+ imageStartX;
-  var coordY = pixelNumY; //  + imageStartY;
+  var coordX = pixelNumX; 
+  var coordY = pixelNumY; 
 
   var P_coords = new Vec2();
   P_coords.x = coordX;
   P_coords.y = coordY;
-  //console.log(P_coords.x, P_coords.y);
   
   
-  // find its barycentric coordinates
-  //var baryCoords = getBaryCoord(P_coords);
+  // find its generalized barycentric coordinates (mean value coordinates)
   var baryCoords = meanValCoordinates(cageVertices, P_coords);
   var sum = 0;
   for (let i = 0; i < baryCoords.length; i++) {
@@ -253,10 +235,6 @@ function copiedPixel(pixelNumX, pixelNumY) {
       return null;
     }
     sum+=(baryCoords[i]);
-    if(pixelNumX == 0 && pixelNumY == 0){
-      console.log(baryCoords[i]);
-    }
-    
   }
   if(sum > 1 + epsilon) {
     return null;
@@ -272,7 +250,6 @@ function copiedPixel(pixelNumX, pixelNumY) {
   }
   var newPixelX = Math.floor(newCoordsX - imageStartX);
   var newPixelY = Math.floor(newCoordsY - imageStartY);
-  //console.log(newPixelX, newPixelY);
 
   // copy pixel at that point
   var rgba = new Vec4();
@@ -300,24 +277,28 @@ function drawDeformedImage(){
   makeCage();
 
   // figure out bounding box of pixels to rerender on the canvas
-  let minX: number = 0;
-  let minY: number = 0;
-  let maxX: number = canvas.width;
-  let maxY: number = canvas.height;
+  let minX: number = cageVertices[0].x;
+  let minY: number = cageVertices[0].y;
+  let maxX: number = cageVertices[0].x;
+  let maxY: number = cageVertices[0].y;
   for (let v = 0; v < cageVertices.length; v++) {
-    let currV = cageVertices[v];
+    let currV = cageVertices[v].copy();
     minX = Math.min(minX, currV.x);
     minY = Math.min(minY, currV.y);
     maxX = Math.max(maxX, currV.x);
     maxY = Math.max(maxY, currV.y);
   }
 
-  //for(var i = 0; i < canvas.width; i++){
-    //for(var j = 0; j < canvas.height; j++){
+  minX = Math.floor(minX);
+  minY = Math.floor(minY);
+  maxX = Math.floor(maxX);
+  maxY = Math.floor(maxY);
+
+  // for(var i = 0; i < canvas.width; i++){
+  //   for(var j = 0; j < canvas.height; j++){
   for (let i = minX; i < maxX; i++) {
-    for (let j = minY; j < maxY; j++) {
-      //console.log(i, j);
-      var pixelInfo = copiedPixel(i, j);
+   for (let j = minY; j < maxY; j++) {
+      var pixelInfo =  copiedPixel(i, j); //new Vec4();
       if(pixelInfo == null) {
         continue;
       }
@@ -327,51 +308,16 @@ function drawDeformedImage(){
       var a = pixelInfo.w;
     
       context.fillStyle = "rgba("+r+","+g+","+b+","+(a/255)+")";
-      //context.fillStyle = "black";
-      context.fillRect( i, j, 1, 1 );
-      index+=4;
-    }
-  }
-}
-
-
-function getBaryCoord(P_coords : Vec2){
-  var a_coords : Vec2 = cageVertices[0];
-	var b_coords : Vec2 = cageVertices[1];
-  var c_coords : Vec2 = cageVertices[2];
-
-  var vab = Vec2.difference(b_coords, a_coords);
-  var vca = Vec2.difference(a_coords, c_coords);
-  var vac = Vec2.difference(c_coords, a_coords);
-  var vap = Vec2.difference(P_coords, a_coords);
-  var CAP_triangle = (Vec2.cross(vca, vap)).length() / 2.0;
-  var ABP_triangle = (Vec2.cross(vab, vap)).length() / 2.0;
-  var ABC_triangle = (Vec2.cross(vab, vac)).length() / 2.0;
-
-  var U = CAP_triangle / ABC_triangle;
-  var V = ABP_triangle / ABC_triangle;
-
-  return [ 1 - U - V, U, V];
-
-}
-
-
-
-function colorEntire() {
-  var canvas = document.getElementById("textCanvas") as HTMLCanvasElement;
-  var context = canvas.getContext('2d');
-
-  var index = 0;
-  for(var i = 0; i < canvas.width; i++){
-    for(var j = 0; j < canvas.height; j++){
-      //context.fillStyle = "rgba("+0+","+0+","+1+","+(255/255)+")";
-      context.fillStyle = "blue";
+      // context.fillStyle = "rgba("+r+","+g+","+b+","+(a)+")";
+      //context.fillStyle = "blue";
       context.fillRect( i, j, 1, 1 );
       index+=4;
     }
   }
 
+
 }
+
 
 // initial image that is rendered
 function initImage(){
@@ -405,7 +351,6 @@ function initImage(){
       
       index+=4;
     }
-    currentImageData2D.push(currentRow);
     ogImageData2D.push(currentRow2);
   }
 
@@ -564,65 +509,5 @@ function meanValCoordinates(cageCoords: Vec2[], pointCoord: Vec2) : number[] {
   }
 
   return baryCoordinates;
-
-  // for (let i = 0; i < nSize; i++) {
-  //   ip = (i+1)%nSize;
-  //   ri = Math.sqrt(s[i].x * s[i].x + s[i].y * s[i].y);
-  //   Ai = 0.5*(s[i].x * s[ip].y - s[ip].x * s[i].y);
-  //   Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
-
-  //   if (ri <= eps) {
-  //     baryCoordinates[i] = 1.0;
-  //     return baryCoordinates;
-  //   } else if (Math.abs(Ai) <= 0 && Di < 0.0) {
-  //     dx = cageCoords[ip].x - cageCoords[i].x;
-  //     dy = cageCoords[ip].y - cageCoords[i].y;
-  //     dl = Math.sqrt(dx*dx + dy*dy);
-      
-  //     dx = pointCoord.x - cageCoords[i].x;
-  //     dy = pointCoord.y - cageCoords[i].y;
-
-  //     mu = Math.sqrt(dx*dx + dy*dy)/dl;
-  //     baryCoordinates[i] = 1.0-mu;
-  //     baryCoordinates[ip] = mu;
-  //     return baryCoordinates;
-  //   }
-
-  //   let tanalpha: number[] = new Array(nSize);
-  //   for (let i = 0; i < nSize; i++) {
-  //     ip = (i+1) % nSize;
-  //     im = (nSize-1+i) % nSize;
-  //     ri = Math.sqrt(s[i].x*s[i].x + s[i].y*s[i].y);
-  //     rp = Math.sqrt(s[ip].x*s[ip].x + s[ip].y*s[ip].y);
-  //     Ai = 0.5*(s[i].x*s[ip].y - s[ip].x*s[i].y);
-  //     Di = s[ip].x*s[i].x + s[ip].y*s[i].y;
-  //     tanalpha[i] = (ri*rp - Di)/(2.0*Ai);
-  //   }
-
-  // if (Math.abs(wsum) > 0.0) {
-  //   for (let i = 0; i < nSize; i++) {
-  //     baryCoordinates[i] /= wsum;
-  //   }
-
-  //   if (Math.abs(wsum) > 0.0) {
-  //     for (let i = 0; i < nSize; i++) {
-  //       baryCoordinates[i] /= wsum;
-  //     }
-  //   }
-  //   console.log(baryCoordinates)
-  //   return baryCoordinates;
-  // }
-  //   return baryCoordinates;
-  // }
 }
-
-// cite: https://stackoverflow.com/questions/951021/what-is-the-javascript-version-of-sleep
-
-// function sleep(ms) {
-//   return new Promise(resolve => setTimeout(resolve, ms));
-// }
-
-// async function pause(ms) {
-//   await sleep(ms);
-// }
 
